@@ -2,8 +2,10 @@ package game.entities
 {
 	import flash.display.BitmapData;
 	import flash.geom.Point;
+	import flash.geom.Rectangle;
 	import net.flashpunk.Entity;
 	import net.flashpunk.FP;
+	import net.flashpunk.graphics.Image;
 	import net.flashpunk.masks.Grid;
 	import net.flashpunk.utils.*;
 	
@@ -21,9 +23,10 @@ package game.entities
 		private var myGrid:Grid;
 		
 		private var myPreviousDirection:Point = new Point;
-		private var myDirection:Point = new Point;
 		private var myPreviousPlane:Point = new Point;
-		private var myPlane:Point = new Point(0, 0.66);
+		
+		private var myDirection:Point = new Point(0, -1);
+		private var myPlane:Point = new Point(0.66, 0);
 		
 		public function View() 
 		{
@@ -36,10 +39,7 @@ package game.entities
 			Input.define("action", Key.X);
 			
 			x = 1;
-			y = 5;
-			
-			myDirection.x = 0;
-			myDirection.y = -1;
+			y = 4;
 			
 			myGrid = new Grid(mapWidth, mapHeight, 1, 1);
 			
@@ -59,67 +59,111 @@ package game.entities
 			RenderScene();
 		}
 		
+		private function WalkForward(walkSpeed:Number):Boolean
+		{
+			var moved:Boolean = false;
+			
+			var check:Point = new Point(uint(x + myDirection.x * walkSpeed), uint(y));
+			trace("walk forward request A: from", x, y, "to", check.x, check.y);
+			trace("x=", x, "\n",
+			"myDirection.x=", myDirection.x, "\n",
+			"walkSpeed=", walkSpeed, "\n");
+			
+			if (!myGrid.getCell(check.x, check.y))
+			{
+				x = check.x;
+				moved = true;
+			}
+			
+			check.x = uint(x);
+			check.y = uint(y + myDirection.y * walkSpeed);
+			trace("walk forward request B: from", x, y, "to", check.x, check.y);
+			trace("x=", x, "\n",
+			"myDirection.x=", myDirection.x, "\n",
+			"walkSpeed=", walkSpeed, "\n");
+			
+			if (!myGrid.getCell(check.x, check.y))
+			{
+				y = check.y;
+				moved = true;
+			}
+			
+			return moved;
+		}
+		
+		private function WalkBackward(walkSpeed:Number):Boolean
+		{
+			var moved:Boolean = false;
+			
+			var check:Point = new Point(uint(x - myDirection.x * walkSpeed), uint(y));
+			trace("walk backward request A: from", x, y, "to", check.x, check.y);
+			trace("x=", x, "\n",
+			"myDirection.x=", myDirection.x, "\n",
+			"walkSpeed=", walkSpeed, "\n");
+			
+			if (!myGrid.getCell(check.x, check.y))
+			{
+				x = check.x;
+				moved = true;
+			}
+			
+			check.x = uint(x);
+			check.y = uint(y - myDirection.y * walkSpeed);
+			trace("walk backward request B: from", x, y, "to", check.x, check.y);
+			trace("x=", x, "\n",
+			"myDirection.x=", myDirection.x, "\n",
+			"walkSpeed=", walkSpeed, "\n");
+			
+			if (!myGrid.getCell(check.x, check.y))
+			{
+				y = check.y;
+				moved = true;
+			}
+			
+			return moved;
+		}
+		
 		override public function update():void 
 		{
 			var turnSin:Number, turnCos:Number;
-			var walkSpeed:Number = FP.elapsed * 5.0;
-			var turnSpeed:Number = FP.elapsed * 3.0;
+			var walkSpeed:Number = 16.0 * FP.elapsed;
+			var turnSpeed:Number = 45.0;
 			
 			var moved:Boolean = false;
 			
-			if (Input.check("dpad-u"))
+			if (Input.pressed("dpad-u"))
 			{
-				if (!myGrid.getCell(uint(x + myDirection.x * walkSpeed), uint(y)))
-				{
-					x += myDirection.x * walkSpeed;
-					moved = true;
-				}
-				
-				if (!myGrid.getCell(uint(x), uint(y + myDirection.y * walkSpeed)))
-				{
-					y += myDirection.y * walkSpeed;
-					moved = true;
-				}
+				moved = WalkForward(walkSpeed);
 			}
-			else if (Input.check("dpad-d"))
+			else if (Input.pressed("dpad-d"))
 			{
-				if (!myGrid.getCell(uint(x - myDirection.x * walkSpeed), uint(y)))
-				{
-					x -= myDirection.x * walkSpeed;
-					moved = true;
-				}
-				
-				if (!myGrid.getCell(uint(x), uint(y - myDirection.y * walkSpeed)))
-				{
-					y -= myDirection.y * walkSpeed;
-					moved = true;
-				}
+				moved = WalkBackward(walkSpeed);
 			}
 			
-			if (Input.check("dpad-l"))
+			if (Input.pressed("dpad-r"))
 			{
 				turnSin = Math.sin(turnSpeed);
 				turnCos = Math.cos(turnSpeed);
 				
-				myPreviousDirection.x = myDirection.x;
+				myPreviousDirection.x = Number(myDirection.x);
 				myDirection.x = myDirection.x * turnCos - myDirection.y * turnSin;
 				myDirection.y = myPreviousDirection.x * turnSin + myDirection.y * turnCos;
 				
-				myPreviousPlane.x = myPlane.x;
+				myPreviousPlane.x = Number(myPlane.x);
 				myPlane.x = myPlane.x * turnCos - myPlane.y * turnSin;
 				myPlane.y = myPreviousPlane.x * turnSin + myPlane.y * turnCos;
 				moved = true;
 			}
-			else if (Input.check("dpad-r"))
+			else if (Input.pressed("dpad-l"))
 			{
 				turnSin = Math.sin(-turnSpeed);
 				turnCos = Math.cos(-turnSpeed);
 				
-				myPreviousDirection.x = myDirection.x;
+				myPreviousDirection.x = Number(myDirection.x);
 				myDirection.x = myDirection.x * turnCos - myDirection.y * turnSin;
 				myDirection.y = myPreviousDirection.x * turnSin + myDirection.y * turnCos;
 				
-				myPreviousPlane.x = myPlane.x;
+				myPreviousPlane.x = Number(myPlane.x);
 				myPlane.x = myPlane.x * turnCos - myPlane.y * turnSin;
 				myPlane.y = myPreviousPlane.x * turnSin + myPlane.y * turnCos;
 				moved = true;
@@ -129,6 +173,8 @@ package game.entities
 			{
 				x = int(x);
 				y = int(y);
+				//myDirection.normalize(1);
+				
 				moved = false;
 				RenderScene();
 			}
@@ -139,12 +185,29 @@ package game.entities
 		override public function render():void 
 		{	
 			FP.buffer.copyPixels(mySceneBuffer, mySceneBuffer.rect, new Point);
+			
+			for (var my:Number = 0; my < mapHeight; my++)
+			{
+				for (var mx:Number = 0; mx < mapWidth; mx++)
+				{
+					Image.createRect(7, 7, (myGrid.getCell(mx, my))? 0xFF0000 : 0x646464).render(new Point(mx * 8, my * 8), new Point);
+				}
+			}
+			
+			var pIcon:Point = new Point(2 + (x * 8), 2 + (y * 8));
+			var pLook:Point = new Point((pIcon.x+1) + myDirection.x*4, (pIcon.y+1) + myDirection.y*4);
+			
+			Image.createRect(2, 2, 0xFFFFFF).render(pIcon, new Point);
+			Image.createRect(1, 1, 0xFFFF00).render(pLook, new Point);
+			
 			super.render();
 		}
 		
 		private function RenderScene():void
 		{
 			mySceneBuffer.fillRect(mySceneBuffer.rect, 0xFF000000);
+			
+			mySceneBuffer.fillRect(new Rectangle(0,0,mySceneBuffer.width,int(mySceneBuffer.height*0.5)), 0xFFB0C8FD);
 			
 			trace("rendering scene: x/y pos", x, ",", y,"facing",myDirection);
 			
